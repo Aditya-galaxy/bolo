@@ -7,6 +7,8 @@ import { intake as task } from "./task.ts";
 
 type Phase = "idle" | "listening" | "thinking" | "speaking";
 
+const REPEAT = { hi: "माफ़ कीजिए, फिर से बोलिए, थोड़ा पास से।", en: "Sorry, please say it again, a little closer to the phone." };
+
 // Fictional sample answers (made with Google Cloud TTS) so the loop can be tried without a microphone.
 const SAMPLES = [
   { label: "Hindi sample", files: ["/samples/hi-1.wav", "/samples/hi-2.wav", "/samples/hi-3.wav"] },
@@ -20,6 +22,7 @@ export default function App() {
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
   const [queue, setQueue] = useState<string[]>([]);
+  const [notice, setNotice] = useState<typeof REPEAT | null>(null);
   const rec = useRef(new Recorder());
   const asked = turns.filter((t) => !t.readyToConfirm).length - (turns.length ? 1 : 0);
 
@@ -27,6 +30,16 @@ export default function App() {
     setPhase("thinking");
     try {
       const t = await understand(task, await toBase64(wav), turns, Math.max(0, asked));
+      // Clinics are loud. If the recording couldn't be understood, ask again instead of guessing, and keep nothing.
+      if (t.unclear || !t.transcript?.trim()) {
+        const lang = turns[turns.length - 1]?.languageCode || t.languageCode || "hi-IN";
+        setNotice(REPEAT);
+        setPhase("speaking");
+        await speak(lang.startsWith("hi") ? REPEAT.hi : REPEAT.en, lang.startsWith("hi") ? "hi-IN" : "en-IN");
+        setPhase("idle");
+        return;
+      }
+      setNotice(null);
       const next = [...turns, t];
       setTurns(next);
       const f = new Map(flags.map((x) => [x.id, x]));
@@ -58,7 +71,7 @@ export default function App() {
     await handle(await toWav(blob));
   }
 
-  function reset() { setTurns([]); setFlags([]); setDone(false); setError(""); setQueue([]); speechSynthesis.cancel(); }
+  function reset() { setTurns([]); setFlags([]); setDone(false); setError(""); setQueue([]); setNotice(null); speechSynthesis.cancel(); }
 
   const last = turns[turns.length - 1];
   const fields = last?.fields ?? {};
@@ -119,9 +132,11 @@ export default function App() {
           </button>
           <p className="state">{phase === "listening" ? "Listening… tap when you're done" : phase === "thinking" ? "Understanding…"
             : phase === "speaking" ? "Speaking…" : turns.length ? "Tap to answer" : "Tap and speak"}</p>
+          {notice && <p className="notice">{notice.hi}<span>{notice.en}</span></p>}
           {error && <p className="error">{error}</p>}
           {!turns.length && (
-            <p className="samples">{SAMPLES.map((s) => <button key={s.label} className="link" onClick={() => playSample(s.files)} disabled={phase !== "idle"}>{s.label}</button>)}</p>
+            <p className="samples">{SAMPLES.map((s) => <button key={s.label} className="link" onClick={() => playSample(s.files)} disabled={phase !== "idle"}>{s.label}</button>)}
+              {import.meta.env.DEV && <button className="link" onClick={() => playSample(["/samples/noise.wav"])} disabled={phase !== "idle"}>Noise</button>}</p>
           )}
           {turns.length > 0 && queue.length > 0 && (
             <p className="samples"><button className="link" onClick={() => playSample(queue)} disabled={phase !== "idle"}>Play the sample's next answer</button></p>

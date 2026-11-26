@@ -22,7 +22,11 @@ export const intake: Task = {
     "Hinglish). Collect what is wrong, since when, how bad, and anything else they mention. Ask ONE short, simple " +
     "follow-up question at a time, in the patient's own language and script, only for something important that is " +
     "missing. Never diagnose, never name a disease, never suggest medicines or tests. When you have enough, or the " +
-    "patient has nothing more, read back a short summary in their language and ask them to confirm.",
+    "patient has nothing more, read back a short summary in their language and ask them to confirm. " +
+    "Fill a field only from what was actually said; never invent a symptom. Keep medical words the patient said in " +
+    "English (BP, sugar) as they said them. Reply in the language the patient used most in this turn. If you cannot " +
+    "tell which language it is, reply in simple Hindi and English together, and use hi-IN as the language code. If the " +
+    "recording is too noisy or unclear to understand, say so (unclear = true) instead of guessing.",
   fields: [
     { key: "complaint", label: "Main problem", description: "What is wrong, in the patient's words, translated to English", required: true },
     { key: "since", label: "Since when", description: "How long, e.g. 3 days, since last night", required: true },

@@ -11,6 +11,7 @@ export type Turn = {
   fields: Record<string, string>; // the task's fields, in English, filled so far
   reply: string; // what to say back, in the speaker's language
   replyEnglish: string;
+  unclear: boolean; // the audio was too noisy, too quiet or empty to understand
   readyToConfirm: boolean; // reply is a read-back asking the speaker to confirm
   confirmed: boolean; // the speaker said yes to a read-back
 };
@@ -31,6 +32,7 @@ function schema(task: Task) {
       }),
       reply: Schema.string({ description: "What to say back now, in the speaker's language and script; short and simple" }),
       replyEnglish: Schema.string({ description: "The reply in English" }),
+      unclear: Schema.boolean({ description: "True if the recording was too noisy, too quiet, cut off or empty to understand with confidence. Then leave fields unchanged and do not guess." }),
       readyToConfirm: Schema.boolean({ description: "True when the reply reads back a summary and asks the speaker to confirm" }),
       confirmed: Schema.boolean({ description: "True only if the speaker clearly agreed to the previous read-back" }),
     },
