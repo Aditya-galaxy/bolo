@@ -61,10 +61,12 @@ export async function understand(task: Task, wavBase64: string, history: Turn[],
   const prompt =
     `Conversation so far:\n${so || "(none: this is the first thing they said)"}\n\nFields filled so far: ${known}\n${budget}\n` +
     "Listen to the new recording, update every field you can (keep earlier values unless corrected), and decide what to say back.";
-  const res = await getModel(task).generateContent([
+  // A request that never answers (a network drop, an App Check hiccup) must not leave the screen on "Understanding".
+  const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error("no answer in time, please try again")), 40000));
+  const res = await Promise.race([getModel(task).generateContent([
     { type: "text", text: prompt },
     { type: "inlineData", inlineData: { mimeType: "audio/wav", data: wavBase64 } },
-  ]);
+  ]), timeout]);
   const t = JSON.parse(res.response.text()) as Turn;
   t.fields = { ...(history[history.length - 1]?.fields ?? {}), ...Object.fromEntries(Object.entries(t.fields ?? {}).filter(([, v]) => v && v.trim())) };
   return t;
